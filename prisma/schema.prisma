@@ -14,10 +14,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
-  id Int @id @default(autoincrement())
-  email String
+  id       Int    @id @default(autoincrement())
+  email    String @unique
   password String
-  role String
-   avatar   String @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
+  role     Role   @default(USER)
+  avatar   String @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
 }
