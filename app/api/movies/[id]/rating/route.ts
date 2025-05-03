@@ -68,7 +68,19 @@ export async function POST(
       });
     }
 
-    return NextResponse.json(rating, { status: 200 });
+    const movieRatings = await prisma.rating.findMany({
+      where: { movieId },
+    });
+    const averageRating =
+      movieRatings.reduce((sum, r) => sum + r.value, 0) / movieRatings.length;
+
+    return NextResponse.json(
+      {
+        ...rating,
+        averageRating,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error saving rating:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

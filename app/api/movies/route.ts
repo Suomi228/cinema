@@ -6,6 +6,16 @@ import { verifyToken } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const token = (await cookies()).get("token")?.value;
+    let userId: number | null = null;
+    if (token) {
+      try {
+        const payload = verifyToken(token) as { userId: number };
+        userId = payload.userId;
+      } catch {
+        userId = null;
+      }
+    }
     const movies = await prisma.movie.findMany({
       include: {
         ratings: true,
@@ -19,6 +29,9 @@ export async function GET() {
           ? movie.ratings.reduce((sum, r) => sum + r.value, 0) /
             movie.ratings.length
           : null;
+      const userRating = userId
+        ? movie.ratings.find((r) => r.userId === userId)?.value
+        : null;
 
       return {
         id: movie.id,
@@ -28,6 +41,7 @@ export async function GET() {
         releaseDate: movie.releaseDate,
         imageUrl: movie.imageUrl,
         averageRating,
+        userRating,
         favoritesCount: movie.favorites.length,
       };
     });

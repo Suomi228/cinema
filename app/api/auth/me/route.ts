@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-// api/auth/me
 export async function GET() {
   const token = (await cookies()).get("token")?.value;
 
@@ -28,7 +27,6 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Возвращаем пользователя с массивом favorites (без дублирования)
     return NextResponse.json({
       id: user.id,
       email: user.email,

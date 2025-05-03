@@ -3,25 +3,23 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-// Импортируйте функцию для получения текущего пользователя.
 
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await getCurrentUser(); // Получаем текущего пользователя.
+  const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  const movieId = parseInt(id); // Преобразуем id в число.
+  const movieId = parseInt(id);
   if (isNaN(movieId)) {
     return NextResponse.json({ error: "Invalid movie ID" }, { status: 400 });
   }
 
-  // Проверяем, есть ли фильм в избранном
   const existingFavorite = await prisma.favorite.findUnique({
     where: {
       userId_movieId: {
@@ -38,7 +36,6 @@ export async function POST(
     );
   }
 
-  // Добавляем фильм в избранное
   const favorite = await prisma.favorite.create({
     data: {
       userId: user.id,
@@ -67,8 +64,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  const { id } = await params; // ✅ Разрешаем Promise
-  const movieId = parseInt(id); // ✅ Без await для parseInt
+  const { id } = await params;
+  const movieId = parseInt(id);
   if (isNaN(movieId)) {
     return NextResponse.json({ error: "Invalid movie ID" }, { status: 400 });
   }
