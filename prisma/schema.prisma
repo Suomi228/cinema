@@ -25,4 +25,40 @@ model User {
   password String
   role     Role   @default(USER)
   avatar   String @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
+
+  Favorite Favorite[]
+
+  Rating Rating[]
+}
+
+model Movie {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String
+  genre       String
+  releaseDate DateTime
+  imageUrl    String     @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
+  favorites   Favorite[]
+  ratings     Rating[]
+}
+
+model Favorite {
+  id      Int   @id @default(autoincrement())
+  user    User  @relation(fields: [userId], references: [id])
+  userId  Int
+  movie   Movie @relation(fields: [movieId], references: [id])
+  movieId Int
+
+  @@unique([userId, movieId])
+}
+
+model Rating {
+  id      Int   @id @default(autoincrement())
+  user    User  @relation(fields: [userId], references: [id])
+  userId  Int
+  movie   Movie @relation(fields: [movieId], references: [id])
+  movieId Int
+  value   Int
+
+  @@unique([userId, movieId])
 }

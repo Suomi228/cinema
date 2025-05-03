@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+// api/auth/me
 export async function GET() {
   const token = (await cookies()).get("token")?.value;
 
@@ -12,8 +13,29 @@ export async function GET() {
 
   try {
     const payload = verifyToken(token) as { userId: number };
-    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-    return NextResponse.json(user);
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: {
+        Favorite: {
+          select: {
+            movieId: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Возвращаем пользователя с массивом favorites (без дублирования)
+    return NextResponse.json({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      favorites: user.Favorite.map(fav => ({ movieId: fav.movieId })),
+    });
   } catch {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
