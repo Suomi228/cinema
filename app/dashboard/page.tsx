@@ -1,5 +1,5 @@
 import LogoutButton from "@/components/LogoutButton";
-import { getCurrentUser } from "@/lib/getCurrentUser";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {

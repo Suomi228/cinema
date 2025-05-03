@@ -1,9 +1,8 @@
-// app/api/users/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import cloudinary from "@/lib/cloudinary";
-import { checkIsAdmin } from "@/lib/chekIsAdmin";
+import { checkIsAdmin } from "@/lib/actions/user.actions";
 
 const defaultAvatarUrl = await cloudinary.uploader.upload(
   "https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png",
@@ -14,33 +13,31 @@ const defaultAvatarUrl = await cloudinary.uploader.upload(
   }
 );
 
-export async function DELETE(req: Request) {
-  const isAdmin = await checkIsAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+export async function POST(req: Request) {
   try {
-    const { id } = await req.json();
-
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const body = await req.json();
+    const { email, password, role } = body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    if (!email || !password || !role) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    if (user.avatar && user.avatar.includes("res.cloudinary.com")) {
-      const matches = user.avatar.match(/\/avatars\/([^/.]+)\./);
-      if (matches) {
-        const publicId = `avatars/${matches[1]}`;
-        await cloudinary.uploader.destroy(publicId);
-      }
-    }
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role,
+        avatar: defaultAvatarUrl.secure_url,
+      },
+    });
 
-    await prisma.user.delete({ where: { id } });
-
-    return NextResponse.json({ message: "User deleted" });
+    return NextResponse.json(user, { status: 201 });
   } catch (error) {
-    console.error("Error deleting user:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error(error);
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
 
@@ -74,30 +71,32 @@ export async function GET() {
   return NextResponse.json(users);
 }
 
-export async function POST(req: Request) {
+export async function DELETE(req: Request) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   try {
-    const body = await req.json();
-    const { email, password, role } = body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    if (!email || !password || !role) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const { id } = await req.json();
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role,
-        avatar: defaultAvatarUrl.secure_url,
-      },
-    });
+    if (user.avatar && user.avatar.includes("res.cloudinary.com")) {
+      const matches = user.avatar.match(/\/avatars\/([^/.]+)\./);
+      if (matches) {
+        const publicId = `avatars/${matches[1]}`;
+        await cloudinary.uploader.destroy(publicId);
+      }
+    }
 
-    return NextResponse.json(user, { status: 201 });
+    await prisma.user.delete({ where: { id } });
+
+    return NextResponse.json({ message: "User deleted" });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
+    console.error("Error deleting user:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
