@@ -19,4 +19,5 @@ model User {
   email String
   password String
   role String
+   avatar   String @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
 }
