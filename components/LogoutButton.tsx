@@ -1,21 +1,40 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import axios from "axios";
+import { useState } from "react";
 
 export default function LogoutButton() {
   const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/sign-in");
+    setLoggingOut(true);
+    try {
+      const response = await axios.post("/api/auth/logout");
+      if (response.status === 200) {
+        router.push("/sign-in");
+      } else {
+        throw new Error("Сервер вернул ошибку");
+      }
+    } catch (error) {
+      console.error("Ошибка при выходе:", error);
+      alert("Не удалось выйти");
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
-    <button
+    <Button
+      type="button"
       onClick={handleLogout}
-      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+      variant="outline"
+      disabled={loggingOut}
+      className="ml-4"
     >
-      Выйти
-    </button>
+      {loggingOut ? "Выход..." : "Выйти"}
+    </Button>
   );
 }
