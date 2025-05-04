@@ -19,6 +19,7 @@ import { useState } from "react";
 import Image from "next/image";
 import axios from "axios";
 import LogoutButton from "./LogoutButton";
+import { toast } from "sonner";
 
 const profileSchema = z.object({
   email: z.string().email(),
@@ -30,7 +31,7 @@ const profileSchema = z.object({
   avatar: z.any().optional(),
 });
 
-export default function ProfileForm({ user }: { user: any }) {
+export default function ProfileForm({ user }: { user: User }) {
   const router = useRouter();
   const [preview, setPreview] = useState(user.avatar);
   const [loading, setLoading] = useState(false);
@@ -67,11 +68,11 @@ export default function ProfileForm({ user }: { user: any }) {
         ...(values.password?.length ? { password: values.password } : {}),
         avatar: avatarUrl,
       });
-
+      toast.success("Профиль успешно обновлён");
       router.refresh();
     } catch (err) {
       console.error(err);
-      alert("Ошибка обновления профиля");
+      toast.error("Ошибка обновления профиля");
     } finally {
       setLoading(false);
     }
@@ -80,6 +81,15 @@ export default function ProfileForm({ user }: { user: any }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {preview && (
+          <Image
+            src={preview}
+            alt="avatar preview"
+            width={80}
+            height={80}
+            className="mt-2"
+          />
+        )}
         <FormField
           control={form.control}
           name="email"
@@ -135,15 +145,6 @@ export default function ProfileForm({ user }: { user: any }) {
                 />
               </FormControl>
               <FormMessage />
-              {preview && (
-                <Image
-                  src={preview}
-                  alt="avatar preview"
-                  width={80}
-                  height={80}
-                  className="mt-2 rounded-full"
-                />
-              )}
             </FormItem>
           )}
         />

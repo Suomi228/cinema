@@ -38,7 +38,7 @@ export async function checkIsAdmin() {
   }
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
 
