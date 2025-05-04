@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { useState } from "react";
 import { useUser } from "@/context/UserContext";
+import { Loader2 } from "lucide-react";
 
-export default function LogoutButton() {
+export default function LogoutButton({
+  className = "",
+}: {
+  className?: string;
+}) {
   const router = useRouter();
   const { refetchUser } = useUser();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -35,9 +40,16 @@ export default function LogoutButton() {
       onClick={handleLogout}
       variant="outline"
       disabled={loggingOut}
-      className="ml-4"
+      className={`w-full sm:w-auto ${className}`}
     >
-      {loggingOut ? "Выход..." : "Выйти"}
+      {loggingOut ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Выход...
+        </>
+      ) : (
+        "Выйти"
+      )}
     </Button>
   );
 }
