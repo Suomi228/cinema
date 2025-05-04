@@ -45,7 +45,10 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     const { id, email, password, role, avatar } = body;
-
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
     const updatedUser = await prisma.user.update({
       where: { id },
       data: {
@@ -67,6 +70,10 @@ export async function PUT(req: Request) {
 }
 
 export async function GET() {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const users = await prisma.user.findMany();
   return NextResponse.json(users);
 }

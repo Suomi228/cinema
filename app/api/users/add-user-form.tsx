@@ -1,93 +1,138 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-export default function AddUserForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
-  const [loading, setLoading] = useState(false);
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
-  const router = useRouter();
+const formSchema = z.object({
+  email: z.string().email({ message: "Неверный email" }),
+  password: z.string().min(6, { message: "Минимум 6 символов" }),
+  role: z.enum(["ADMIN", "USER"], {
+    errorMap: () => ({ message: "Выберите роль: ADMIN или USER" }),
+  }),
+});
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+type FormData = z.infer<typeof formSchema>;
 
-    const res = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role }),
-    });
+export default function AddUserForm({
+  onUserAdded,
+}: {
+  onUserAdded?: () => void;
+}) {
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      role: "USER",
+    },
+  });
 
-    setLoading(false);
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { isSubmitting },
+  } = form;
 
-    if (res.ok) {
-      setEmail("");
-      setPassword("");
-      setRole("");
-      router.refresh();
-    } else {
-      console.error("Error creating user");
+  const onSubmit = async (data: FormData) => {
+    try {
+      await axios.post("/api/users", data);
+      toast.success("Пользователь успешно создан");
+      reset({
+        email: "",
+        password: "",
+        role: "USER",
+      });
+      onUserAdded?.();
+    } catch (error) {
+      toast.error("Ошибка при создании пользователя");
+      console.error(error);
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <input
-        className="border px-4 py-2 w-full"
-        placeholder="Email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <input
-        className="border px-4 py-2 w-full"
-        placeholder="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <input
-        className="border px-4 py-2 w-full"
-        placeholder="Role"
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-        required
-      />
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
+        <FormField
+          control={control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="Email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <button
-        type="submit"
-        className="bg-blue-500 text-white px-4 py-2 rounded flex items-center justify-center disabled:opacity-50"
-        disabled={loading}
-      >
-        {loading ? (
-          <svg
-            className="animate-spin h-5 w-5 mr-2 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            ></path>
-          </svg>
-        ) : null}
-        {loading ? "Adding..." : "Add User"}
-      </button>
-    </form>
+        <FormField
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="Password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Role</FormLabel>
+              <FormControl>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите роль" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ADMIN">ADMIN</SelectItem>
+                    <SelectItem value="USER">USER</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? "Добавление..." : "Добавить пользователя"}
+        </Button>
+      </form>
+    </Form>
   );
 }
