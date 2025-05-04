@@ -3,14 +3,12 @@ import Image from "next/image";
 import { useEffect } from "react";
 
 export default function Home() {
-  const original = document.body.style.overflow;
   useEffect(() => {
     document.body.style.overflow = "hidden";
-
     return () => {
-      document.body.style.overflow = original;
+      document.body.style.overflow = "";
     };
-  }, [original]);
+  }, []);
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-black/60 z-10" />

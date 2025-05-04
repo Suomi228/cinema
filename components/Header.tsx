@@ -55,26 +55,31 @@ export default function Header() {
           </div>
         ) : (
           <nav className="flex items-center gap-2">
+            <NavigationMenu className="hidden md:block">
+              <NavigationMenuList className="gap-2">
+                <NavigationMenuItem>
+                  <Link href="/movies" legacyBehavior passHref>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={
+                        pathname === "/movies"
+                          ? "bg-black text-white hover:bg-black hover:text-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-black"
+                          : ""
+                      }
+                    >
+                      Фильмы
+                    </Button>
+                  </Link>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+
             {user ? (
               <>
-                <NavigationMenu className="hidden md:block">
-                  <NavigationMenuList className="gap-2">
-                    <NavigationMenuItem>
-                      <Link href="/movies" legacyBehavior passHref>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={
-                            pathname === "/movies"
-                              ? "bg-black text-white hover:bg-black hover:text-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-black"
-                              : ""
-                          }
-                        >
-                          Фильмы
-                        </Button>
-                      </Link>
-                    </NavigationMenuItem>
-                    {user.role === "ADMIN" && (
+                {user.role === "ADMIN" && (
+                  <NavigationMenu className="hidden md:block">
+                    <NavigationMenuList className="gap-2">
                       <NavigationMenuItem>
                         <Link href="/users" legacyBehavior passHref>
                           <Button
@@ -90,10 +95,11 @@ export default function Header() {
                           </Button>
                         </Link>
                       </NavigationMenuItem>
-                    )}
-                  </NavigationMenuList>
-                </NavigationMenu>
+                    </NavigationMenuList>
+                  </NavigationMenu>
+                )}
 
+                {/* Меню пользователя */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
