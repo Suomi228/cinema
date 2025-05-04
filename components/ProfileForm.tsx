@@ -90,6 +90,15 @@ export default function ProfileForm({ user }: { user: User }) {
             className="mt-2"
           />
         )}
+        {user.role && (
+          <div>
+            <span className="text-medium text-muted-foreground">
+              Ваша роль:{" "}
+            </span>
+            <span className="font-medium">{user.role}</span>
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="email"
