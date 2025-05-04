@@ -2,6 +2,39 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { toast } from "sonner";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Star } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Resolver, useForm } from "react-hook-form";
+import * as z from "zod";
 
 type Movie = {
   id: number;
@@ -31,39 +64,77 @@ const StarRating = ({
 }) => (
   <div className="flex items-center">
     {[1, 2, 3, 4, 5].map((star) => (
-      <button
+      <Button
         key={star}
-        type="button"
+        variant="ghost"
+        size="icon"
         onClick={() => onRatingChange?.(star)}
         disabled={disabled}
-        className={`text-2xl ${
-          !disabled ? "cursor-pointer" : "cursor-default"
-        } ${star <= rating ? "text-yellow-400" : "text-gray-300"}`}
+        className="h-8 w-8 p-0"
       >
-        ★
-      </button>
+        <Star
+          className={`h-5 w-5 ${
+            star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+          }`}
+        />
+      </Button>
     ))}
   </div>
 );
 
+const movieFormSchema = z.object({
+  title: z.string().min(1, "Название обязательно").max(30),
+  description: z.string().max(100).optional(),
+  genre: z.string().min(1, "Выберите жанр"),
+  releaseDate: z.string().min(1, "Дата выхода обязательна"),
+  image: z
+    .any()
+    .refine((file) => file instanceof File, "Постер обязателен")
+    .refine(
+      (file) => file.size <= 5 * 1024 * 1024,
+      "Максимальный размер файла 5MB"
+    )
+    .refine(
+      (file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type),
+      "Только .jpg, .png или .webp форматы"
+    ),
+});
+
+type MovieFormValues = z.infer<typeof movieFormSchema>;
+
 export default function MoviesPage() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>(
     {}
   );
   const [ratingLoading, setRatingLoading] = useState<Record<number, boolean>>(
     {}
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
 
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    genre: "",
-    releaseDate: "",
-    image: null as File | null,
+  const form = useForm<MovieFormValues>({
+    resolver: zodResolver(movieFormSchema) as Resolver<MovieFormValues>,
+    defaultValues: {
+      title: "",
+      description: "",
+      genre: "",
+      releaseDate: "",
+      image: undefined,
+    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue,
+    watch,
+    trigger,
+  } = form;
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const fetchMovies = async () => {
@@ -71,7 +142,7 @@ export default function MoviesPage() {
       const res = await axios.get("/api/movies");
       setMovies(res.data);
     } catch (err) {
-      console.error("Error fetching movies:", err);
+      toast.error("Не удалось загрузить фильмы");
     }
   };
 
@@ -86,7 +157,9 @@ export default function MoviesPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
       await Promise.all([fetchMovies(), fetchUserData()]);
+      setIsLoading(false);
     };
     fetchData();
   }, []);
@@ -101,8 +174,9 @@ export default function MoviesPage() {
       setRatingLoading((prev) => ({ ...prev, [movieId]: true }));
       await axios.post(`/api/movies/${movieId}/rating`, { value });
       await fetchMovies();
+      toast.success("Оценка сохранена");
     } catch (error) {
-      console.error("Error rating movie:", error);
+      toast.error("Ошибка оценки");
     } finally {
       setRatingLoading((prev) => ({ ...prev, [movieId]: false }));
     }
@@ -110,7 +184,7 @@ export default function MoviesPage() {
 
   const toggleFavorite = async (movieId: number) => {
     if (!user) {
-      setError("Для добавления в избранное необходимо авторизоваться");
+      toast.error("Требуется авторизация");
       return;
     }
 
@@ -119,23 +193,25 @@ export default function MoviesPage() {
 
       if (isFavorite(movieId)) {
         await axios.delete(`/api/movies/${movieId}/favorite`);
+        toast.success("Фильм успешно удален из избранного");
       } else {
         await axios.post(`/api/movies/${movieId}/favorite`);
+        toast.success("Фильм успешно добавлен в ваше избранное");
       }
 
       await fetchUserData();
     } catch (err) {
-      setError("Ошибка при обновлении избранного");
-      console.error(err);
+      toast.error("Не удалось обновить избранное");
     } finally {
       setLoadingStates((prev) => ({ ...prev, [movieId]: false }));
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const file = e.target.files[0];
-      setFormData({ ...formData, image: file });
+      setValue("image", file);
+      await trigger("image");
 
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result as string);
@@ -143,194 +219,244 @@ export default function MoviesPage() {
     }
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleCreateMovie = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.title || !formData.image) return;
-
+  const onSubmit = async (data: MovieFormValues) => {
     try {
-      const data = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value) data.append(key, value);
+      const formData = new FormData();
+      formData.append("title", data.title);
+      formData.append("description", data.description || "");
+      formData.append("genre", data.genre);
+      formData.append("releaseDate", data.releaseDate);
+      formData.append("image", data.image);
+
+      await axios.post("/api/movies", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      await axios.post("/api/movies", data);
       await fetchMovies();
-
-      setFormData({
-        title: "",
-        description: "",
-        genre: "",
-        releaseDate: "",
-        image: null,
-      });
+      setOpenDialog(false);
+      reset();
       setImagePreview(null);
+      toast.success("Фильм успешно добавлен");
     } catch (error) {
-      console.error("Error creating movie:", error);
+      toast.error("Не удалось добавить фильм");
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-6">
+          <Skeleton className="h-8 w-24" /> <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-24" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Фильмы</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Фильмы</h1>
 
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
-      )}
-
-      {user?.role === "ADMIN" && (
-        <form
-          onSubmit={handleCreateMovie}
-          className="mb-8 p-4 bg-gray-100 rounded-lg"
-        >
-          <h2 className="text-xl font-semibold mb-4">Добавить новый фильм</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">
-                  Название фильма
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">Описание</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded"
-                  rows={3}
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">Жанр</label>
-                <select
-                  name="genre"
-                  value={formData.genre}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded"
+        {user?.role === "ADMIN" && (
+          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+            <DialogTrigger asChild>
+              <Button>Добавить фильм</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Добавить новый фильм</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="title">Название фильма</Label>
+                      <Input id="title" {...register("title")} />
+                      {errors.title && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.title.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Описание</Label>
+                      <Textarea
+                        id="description"
+                        {...register("description")}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      {errors.description && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.description.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="genre">Жанр</Label>
+                      <Select
+                        {...register("genre")}
+                        onValueChange={(value) => setValue("genre", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите жанр" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Комедия">Комедия</SelectItem>
+                          <SelectItem value="Драма">Драма</SelectItem>
+                          <SelectItem value="Боевик">Боевик</SelectItem>
+                          <SelectItem value="Фантастика">Фантастика</SelectItem>
+                          <SelectItem value="Ужасы">Ужасы</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.genre && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.genre.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="releaseDate">Дата выхода</Label>
+                      <Input
+                        id="releaseDate"
+                        type="date"
+                        {...register("releaseDate")}
+                      />
+                      {errors.releaseDate && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.releaseDate.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="image">Постер фильма</Label>
+                      <Input
+                        id="image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                      {errors.image && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.image.message}
+                        </p>
+                      )}
+                    </div>
+                    {imagePreview && (
+                      <div className="mt-4">
+                        <Label>Предпросмотр:</Label>
+                        <img
+                          src={imagePreview}
+                          alt="Предпросмотр постера"
+                          className="w-full h-48 object-contain border rounded mt-2"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
                 >
-                  <option value="">Выберите жанр</option>
-                  <option value="Комедия">Комедия</option>
-                  <option value="Драма">Драма</option>
-                  <option value="Боевик">Боевик</option>
-                  <option value="Фантастика">Фантастика</option>
-                  <option value="Ужасы">Ужасы</option>
-                </select>
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">Дата выхода</label>
-                <input
-                  type="date"
-                  name="releaseDate"
-                  value={formData.releaseDate}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-            </div>
-            <div>
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">Постер фильма</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-                {imagePreview && (
-                  <div className="mt-4">
-                    <p className="mb-2 font-medium">Предпросмотр:</p>
-                    <img
-                      src={imagePreview}
-                      alt="Предпросмотр постера"
-                      className="w-full h-48 object-contain border rounded"
+                  {isSubmitting ? "Добавление..." : "Добавить фильм"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {movies.map((movie) => (
+          <Card key={movie.id} className="flex flex-col h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">
+                {movie.title.length > 20
+                  ? movie.title.slice(0, 20) + "..."
+                  : movie.title}
+              </CardTitle>
+              <CardDescription className="flex items-center gap-2">
+                <Badge variant="outline">{movie.genre}</Badge>
+                <span>{new Date(movie.releaseDate).getFullYear()}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-4">
+              <img
+                src={movie.imageUrl}
+                alt={movie.title}
+                className="w-full h-48 object-contain rounded"
+              />
+              <p className="text-sm text-gray-700">
+                {movie.description.length > 30
+                  ? movie.description.slice(0, 30) + "..."
+                  : movie.description}
+              </p>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <StarRating
+                    rating={Math.round(movie.averageRating || 0)}
+                    disabled
+                  />
+                  {movie.averageRating && (
+                    <span className="text-sm text-gray-600">
+                      {movie.averageRating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+
+                {user && (
+                  <div>
+                    <Label>Ваша оценка:</Label>
+                    <StarRating
+                      rating={movie.userRating || 0}
+                      onRatingChange={(rating) =>
+                        handleRateMovie(movie.id, rating)
+                      }
+                      disabled={ratingLoading[movie.id]}
                     />
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-          <button
-            type="submit"
-            className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-          >
-            Добавить фильм
-          </button>
-        </form>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {movies.map((movie) => (
-          <div key={movie.id} className="border rounded-lg p-4 flex flex-col">
-            <img
-              src={movie.imageUrl}
-              alt={movie.title}
-              className="w-full h-48 object-cover rounded"
-            />
-            <h2 className="text-xl font-semibold mt-2">{movie.title}</h2>
-            <p className="text-sm">
-              {movie.genre} • {new Date(movie.releaseDate).getFullYear()}
-            </p>
-            <p className="text-sm mt-2 text-gray-700 flex-grow">
-              {movie.description}
-            </p>
-
-            <div className="flex items-center mt-2">
-              <StarRating
-                rating={Math.round(movie.averageRating || 0)}
-                disabled
-              />
-              {movie.averageRating && (
-                <span className="ml-2 text-sm text-gray-600">
-                  {movie.averageRating.toFixed(1)}
-                </span>
-              )}
-            </div>
-
-            {user && (
-              <div className="mt-2">
-                <p className="text-sm mb-1">Ваша оценка:</p>
-                <StarRating
-                  rating={movie.userRating || 0}
-                  onRatingChange={(rating) => handleRateMovie(movie.id, rating)}
-                  disabled={ratingLoading[movie.id]}
-                />
-              </div>
-            )}
-
-            <button
-              onClick={() => toggleFavorite(movie.id)}
-              disabled={!user || loadingStates[movie.id]}
-              className={`mt-2 px-4 py-1 rounded hover:bg-yellow-500 ${
-                isFavorite(movie.id)
-                  ? "bg-gray-400 hover:bg-gray-500"
-                  : "bg-yellow-400 hover:bg-yellow-500"
-              } ${!user ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {loadingStates[movie.id]
-                ? "Загрузка..."
-                : isFavorite(movie.id)
-                ? "Удалить из избранного"
-                : "Добавить в избранное"}
-            </button>
-          </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={() => toggleFavorite(movie.id)}
+                disabled={!user || loadingStates[movie.id]}
+                variant={isFavorite(movie.id) ? "secondary" : "default"}
+                className="w-full"
+              >
+                {loadingStates[movie.id]
+                  ? "Загрузка..."
+                  : isFavorite(movie.id)
+                  ? "Удалить из избранного"
+                  : "Добавить в избранное"}
+              </Button>
+            </CardFooter>
+          </Card>
         ))}
       </div>
     </div>
