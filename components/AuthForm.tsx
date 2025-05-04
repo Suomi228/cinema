@@ -1,4 +1,3 @@
-// app/auth/AuthForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/UserContext";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -45,6 +45,7 @@ interface AuthFormProps {
 export default function AuthForm({ type }: AuthFormProps) {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState("");
+  const { refetchUser } = useUser();
 
   const schema = formSchema(type);
   const form = useForm<z.infer<typeof schema>>({
@@ -62,6 +63,7 @@ export default function AuthForm({ type }: AuthFormProps) {
     try {
       if (isLogin) {
         await axios.post("/api/auth/login", values);
+        await refetchUser();
         router.push("/profile");
       } else {
         await axios.post("/api/auth/register", values);

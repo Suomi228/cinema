@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { useState } from "react";
+import { useUser } from "@/context/UserContext";
 
 export default function LogoutButton() {
   const router = useRouter();
+  const { refetchUser } = useUser();
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -14,6 +16,7 @@ export default function LogoutButton() {
     try {
       const response = await axios.post("/api/auth/logout");
       if (response.status === 200) {
+        await refetchUser();
         router.push("/sign-in");
       } else {
         throw new Error("Сервер вернул ошибку");
