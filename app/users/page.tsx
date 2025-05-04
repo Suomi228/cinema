@@ -1,40 +1,64 @@
 "use client";
-import AddUserForm from "../api/users/add-user-form";
-import EditUserForm from "../api/users/edit-user-form";
-import DeleteUserButton from "../api/users/delete";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { UserActions } from "../api/users/delete";
+import { AddUserDialog } from "../api/users/add-user-form";
+
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const checkAdminAndFetchUsers = async () => {
+
+  const fetchUsers = async () => {
     try {
+      setIsLoading(true);
       const res = await axios.get("/api/users");
       if (res.status === 200) {
         setIsAdmin(true);
         setUsers(res.data);
       } else if (res.status === 403) {
         setIsAdmin(false);
-        toast.error("Нет доступа: только админы могут просматривать пользователей");
+        toast.error("Только администраторы могут просматривать пользователей");
       }
     } catch (err) {
-      console.error("Error checking admin or fetching users:", err);
+      console.error("Ошибка загрузки пользователей:", err);
+      toast.error("Ошибка загрузки пользователей");
     } finally {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
-    checkAdminAndFetchUsers();
+    fetchUsers();
   }, []);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-800" />
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-32 mb-6" />
+        <div className="grid gap-6">
+          <Skeleton className="h-[400px] w-full" />
+        </div>
       </div>
     );
   }
@@ -42,25 +66,75 @@ export default function UsersPage() {
   if (!isAdmin) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Users</h1>
-        <p>У вас нет прав для просмотра этой страницы.</p>
+        <h1 className="text-2xl font-bold mb-4">Пользователи</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Доступ запрещен</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>У вас нет прав для просмотра этой страницы.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Users</h1>
-      <AddUserForm onUserAdded={checkAdminAndFetchUsers} />
-      <ul className="mt-6 space-y-4">
-        {users.map((user) => (
-          <li key={user.id} className="border p-4 rounded">
-            <strong>{user.email}</strong> — {user.role}
-            <EditUserForm user={user} />
-            <DeleteUserButton id={user.id} />
-          </li>
-        ))}
-      </ul>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Пользователи</h1>
+        <AddUserDialog onSuccess={fetchUsers} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardDescription>Список всех пользователей системы</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Пользователь</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Роль</TableHead>
+                <TableHead className="text-right">Действия</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center space-x-4">
+                      <Avatar>
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback>
+                          {user.email.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={user.role === "ADMIN" ? "default" : "secondary"}
+                    >
+                      {user.role === "ADMIN" ? "Администратор" : "Пользователь"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <UserActions user={user} onSuccess={fetchUsers} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+
+
+
+

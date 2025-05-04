@@ -1,64 +1,134 @@
 "use client";
 
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function EditUserForm({ user }: { user: any }) {
-  const [email, setEmail] = useState(user.email);
-  const [role, setRole] = useState(user.role);
-  const [avatar, setAvatar] = useState(user.avatar);
-  const [uploading, setUploading] = useState(false);
+const userFormSchema = z.object({
+  email: z.string().email({ message: "Неверный email" }),
+  password: z
+    .string()
+    .min(6, { message: "Минимум 6 символов" })
+    .or(z.literal(""))
+    .optional(),
+  role: z.enum(["ADMIN", "USER"]),
+});
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+export function EditUserForm({
+  user,
+  onSuccess,
+}: {
+  user: User;
+  onSuccess: () => void;
+}) {
+  const form = useForm<z.infer<typeof userFormSchema>>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      email: user.email,
+      password: "",
+      role: user.role,
+    },
+  });
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "unsigned_avatar");
-
-    setUploading(true);
-
-    const res = await fetch("https://api.cloudinary.com/v1_1/dit8lunbz/image/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-    setAvatar(data.secure_url);
-    setUploading(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    await fetch("/api/users", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
+    try {
+      const dataToSend: any = {
         id: user.id,
-        email,
-        role,
-        password: user.password,
-        avatar,
-      }),
-    });
+        email: values.email,
+        role: values.role,
+      };
 
-    window.location.reload();
+      if (values.password && values.password.trim() !== "") {
+        dataToSend.password = values.password;
+      }
+
+      await axios.put("/api/users", dataToSend);
+      toast.success("Пользователь обновлен");
+      onSuccess();
+    } catch (error) {
+      toast.error("Ошибка при обновлении пользователя");
+      console.error(error);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 mt-2">
-      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="border p-1 w-full" />
-      <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Role" className="border p-1 w-full" />
-
-      <div>
-        <input type="file" accept="image/*" onChange={handleAvatarUpload} className="block" />
-        {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
-        {avatar && <img src={avatar} alt="avatar preview" width={100} className="mt-2" />}
-      </div>
-
-      <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded">Save</button>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="Email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Пароль</FormLabel>
+              <FormControl>
+                <Input
+                  type="password"
+                  placeholder="Оставьте пустым, чтобы не менять"
+                  {...field}
+                  value={field.value || ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Роль</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите роль" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="USER">Пользователь</SelectItem>
+                  <SelectItem value="ADMIN">Администратор</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">
+          Сохранить
+        </Button>
+      </form>
+    </Form>
   );
 }

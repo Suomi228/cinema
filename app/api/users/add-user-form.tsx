@@ -1,47 +1,42 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { toast } from "sonner";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-
+import { Button } from "@/components/ui/button";
+import { DialogHeader } from "@/components/ui/dialog";
 import {
-  Form,
   FormField,
   FormItem,
   FormLabel,
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@radix-ui/react-dialog";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select";
+} from "@radix-ui/react-select";
+import axios from "axios";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { useForm, Form } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
-const formSchema = z.object({
+const userFormSchema = z.object({
   email: z.string().email({ message: "Неверный email" }),
   password: z.string().min(6, { message: "Минимум 6 символов" }),
-  role: z.enum(["ADMIN", "USER"], {
-    errorMap: () => ({ message: "Выберите роль: ADMIN или USER" }),
-  }),
+  role: z.enum(["ADMIN", "USER"]),
 });
-
-type FormData = z.infer<typeof formSchema>;
-
-export default function AddUserForm({
-  onUserAdded,
-}: {
-  onUserAdded?: () => void;
-}) {
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+export function AddUserDialog({ onSuccess }: { onSuccess: () => void }) {
+  const [open, setOpen] = useState(false);
+  const form = useForm<z.infer<typeof userFormSchema>>({
+    resolver: zodResolver(userFormSchema),
     defaultValues: {
       email: "",
       password: "",
@@ -49,23 +44,13 @@ export default function AddUserForm({
     },
   });
 
-  const {
-    handleSubmit,
-    control,
-    reset,
-    formState: { isSubmitting },
-  } = form;
-
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
     try {
-      await axios.post("/api/users", data);
+      await axios.post("/api/users", values);
       toast.success("Пользователь успешно создан");
-      reset({
-        email: "",
-        password: "",
-        role: "USER",
-      });
-      onUserAdded?.();
+      form.reset();
+      setOpen(false);
+      onSuccess();
     } catch (error) {
       toast.error("Ошибка при создании пользователя");
       console.error(error);
@@ -73,66 +58,72 @@ export default function AddUserForm({
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
-        <FormField
-          control={control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="Email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="Password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Role</FormLabel>
-              <FormControl>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите роль" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADMIN">ADMIN</SelectItem>
-                    <SelectItem value="USER">USER</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Добавление..." : "Добавить пользователя"}
-        </Button>
-      </form>
-    </Form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>Добавить пользователя</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Создать нового пользователя</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Пароль</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Пароль" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Роль</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите роль" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="USER">Пользователь</SelectItem>
+                      <SelectItem value="ADMIN">Администратор</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full">
+              Создать
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
