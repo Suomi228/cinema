@@ -20,15 +20,15 @@ enum Role {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  role     Role   @default(USER)
-  avatar   String @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
+  id        Int     @id @default(autoincrement())
+  email     String  @unique
+  password  String
+  role      Role    @default(USER)
+  avatar    String  @default("https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png")
+  isDeleted Boolean @default(false)
 
   Favorite Favorite[]
-
-  Rating Rating[]
+  Rating   Rating[]
 }
 
 model Movie {

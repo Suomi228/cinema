@@ -64,7 +64,7 @@ export default function AuthForm({ type }: AuthFormProps) {
       if (isLogin) {
         await axios.post("/api/auth/login", values);
         await refetchUser();
-        router.push("/profile");
+        router.push("/movies");
       } else {
         await axios.post("/api/auth/register", values);
         router.push("/sign-in");

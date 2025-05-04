@@ -170,12 +170,9 @@ export default function ProfileForm({ user }: { user: User }) {
                 <FormItem>
                   <FormLabel>
                     Пароль{" "}
-                    <span className="text-sm text-muted-foreground">
-                      (оставьте пустым, если не хотите менять)
-                    </span>
                   </FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} />
+                    <Input type="password" placeholder="Оставьте пустым, чтобы не менять" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -20,9 +20,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { UserActions } from "../api/users/delete";
-import { AddUserDialog } from "../api/users/add-user-form";
-
+import { UserActions } from "../../components/UserActions";
+import { AddUserDialog } from "../../components/AddUserDialog";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -88,7 +87,7 @@ export default function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardDescription>Список всех пользователей системы</CardDescription>
+          <CardTitle>Список на ликвидацию</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -133,8 +132,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
-
-
-
-
