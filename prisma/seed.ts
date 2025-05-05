@@ -44,7 +44,7 @@ async function main() {
         genre: "Sci-Fi",
         releaseDate: new Date("2014-11-07"),
         imageUrl:
-          "https://image.tmdb.org/t/p/original/nCbkOyOMTePnuUdF7iOljF1ROoT.jpg",
+          "https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png",
       },
       {
         title: "Начало",
@@ -52,7 +52,7 @@ async function main() {
         genre: "Action",
         releaseDate: new Date("2010-07-16"),
         imageUrl:
-          "https://image.tmdb.org/t/p/original/qmDpIHrmpJINaRKAfWQfftjCdyi.jpg",
+          "https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png",
       },
       {
         title: "Матрица",
@@ -60,7 +60,7 @@ async function main() {
         genre: "Sci-Fi",
         releaseDate: new Date("1999-03-31"),
         imageUrl:
-          "https://image.tmdb.org/t/p/original/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+          "https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png",
       },
       {
         title: "Темный рыцарь",
@@ -68,7 +68,7 @@ async function main() {
         genre: "Action",
         releaseDate: new Date("2008-07-18"),
         imageUrl:
-          "https://image.tmdb.org/t/p/original/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+          "https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png",
       },
       {
         title: "Аватар",
@@ -76,7 +76,7 @@ async function main() {
         genre: "Fantasy",
         releaseDate: new Date("2009-12-18"),
         imageUrl:
-          "https://image.tmdb.org/t/p/original/kmcqlZGaSh20zpTbuoF0Cdn07dT.jpg",
+          "https://greekherald.com.au/wp-content/uploads/2020/07/default-avatar.png",
       },
     ],
   });
