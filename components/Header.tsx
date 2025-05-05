@@ -98,8 +98,6 @@ export default function Header() {
                     </NavigationMenuList>
                   </NavigationMenu>
                 )}
-
-                {/* Меню пользователя */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -117,7 +115,7 @@ export default function Header() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem asChild>
-                      <Link href="/profile" className="flex items-center">
+                      <Link href="/profile" className="flex items-center cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
                         <span>Профиль</span>
                       </Link>
