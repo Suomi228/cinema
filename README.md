@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Руководство по установке
 
-## Getting Started
+Это подробное руководство поможет вам развернуть приложение локально, включая настройку базы данных, интеграцию с Cloudinary и доступ к возможностям администратора.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 📋 Требования
+
+Для работы приложения необходимо:
+- 🟢 Node.js (v18 или новее)
+- 🟢 PostgreSQL
+- 🟢 Git
+- 🟢 Аккаунт Cloudinary ([бесплатный тариф](https://cloudinary.com/users/register/free))
+
+---
+
+## 🛠️ Инструкция по установке
+
+### 1. 📦 Клонирование репозитория
+
 ```
+git clone https://github.com/Suomi228/cinema.git
+cd my-app
+```
+### 2. 🗄️ Настройка базы данных
+1. Откройте pgAdmin или другой клиент PostgreSQL
+2. Создайте новую базу данных с именем cinema
+3. Создайте файл .env в корне проекта со следующим содержимым:
+```
+DATABASE_URL="postgresql://postgres:ваш_пароль@localhost:5432/cinema?schema=public"
+JWT_SECRET="your_secure_jwt_secret_here"
+```
+⚠️ Не забудьте заменить ваш_пароль и ваш_секретный_ключ на свои значения 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. ☁️ Настройка Cloudinary
+1. Зарегистрируйтесь на Cloudinary
+2. Перейдите в Programmable Media
+3. Перейдите Dashboard и скопируйте: Cloud name, API Key, API Secret
+4. Добавьте их в файл .env:
+```
+CLOUDINARY_CLOUD_NAME="your_cloud_name"
+CLOUDINARY_API_KEY="your_api_key"
+CLOUDINARY_API_SECRET="your_api_secret"
+```
+### 4. 📦 Установка зависимостей
+```
+npm install
+```
+### 5. 🔄 Миграции базы данных
+```
+npm install
+npx prisma migrate dev --name init
+npm run seed
+```
+### 6. 🚀 Запуск приложения
+```
+npm run dev
+```
+Приложение будет доступно по адресу: http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔑 Доступ для администратора
+- Email: admin@gmail.com
+- Пароль: admin@gmail.com
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ✨ Основные функции платформы
+- 🎥 **Просмотр афиш фильмов** — Доступно всем пользователям
+- ⭐️ **Оценка фильмов** — Авторизованные пользователи могут ставить фильму оценку  
+- ❤️ **Избранное** — Авторизованные пользователи могут добавлять фильмы в список избранных 
+- 👤 **Регистрация и авторизация** — Полная система управления пользователями  
+- ⚙️ **Возможности администратора** — Управление контентом и пользователями  
+- ☁️ **Интеграция с Cloudinary** — Хранение и обработка изображений  
