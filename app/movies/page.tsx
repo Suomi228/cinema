@@ -84,12 +84,11 @@ const StarRating = ({
 
 const movieFormSchema = z.object({
   title: z.string().min(1, "Название обязательно").max(30),
-  description: z.string().max(100).optional(),
+  description: z.string().min(1, "Описание обязательно").max(100),
   genre: z.string().min(1, "Выберите жанр"),
   releaseDate: z.string().min(1, "Дата выхода обязательна"),
   image: z
-    .any()
-    .refine((file) => file instanceof File, "Постер обязателен")
+    .instanceof(File, { message: "Постер обязателен" })
     .refine(
       (file) => file.size <= 5 * 1024 * 1024,
       "Максимальный размер файла 5MB"
