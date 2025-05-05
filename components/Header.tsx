@@ -77,27 +77,6 @@ export default function Header() {
 
             {user ? (
               <>
-                {user.role === "ADMIN" && (
-                  <NavigationMenu className="hidden md:block">
-                    <NavigationMenuList className="gap-2">
-                      <NavigationMenuItem>
-                        <Link href="/users" legacyBehavior passHref>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={
-                              pathname === "/users"
-                                ? "bg-black text-white hover:bg-black hover:text-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-black"
-                                : ""
-                            }
-                          >
-                            Пользователи
-                          </Button>
-                        </Link>
-                      </NavigationMenuItem>
-                    </NavigationMenuList>
-                  </NavigationMenu>
-                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -123,15 +102,17 @@ export default function Header() {
                         <span>Профиль</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href="/users"
-                        className="flex items-center cursor-pointer"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Пользователи</span>
-                      </Link>
-                    </DropdownMenuItem>
+                    {user.role === "ADMIN" && (
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href="/users"
+                          className="flex items-center cursor-pointer"
+                        >
+                          <Users className="mr-2 h-4 w-4" />
+                          <span>Пользователи</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onClick={handleLogout}
