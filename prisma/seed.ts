@@ -4,11 +4,9 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Хэш паролей
   const adminPassword = await bcrypt.hash("admin@gmail.com", 10);
   const userPassword = await bcrypt.hash("password123", 10);
 
-  // 2. Пользователи
   const users = await prisma.user.createMany({
     data: [
       {
@@ -35,7 +33,6 @@ async function main() {
     ],
   });
 
-  // 3. Фильмы
   const movies = await prisma.movie.createMany({
     data: [
       {
@@ -81,11 +78,9 @@ async function main() {
     ],
   });
 
-  // Получаем пользователей и фильмы для связи
   const allUsers = await prisma.user.findMany();
   const allMovies = await prisma.movie.findMany();
 
-  // 4. Избранное (каждому юзеру по одному фильму)
   for (let i = 0; i < allUsers.length; i++) {
     await prisma.favorite.create({
       data: {
@@ -95,7 +90,6 @@ async function main() {
     });
   }
 
-  // 5. Оценки
   for (let i = 0; i < allUsers.length; i++) {
     await prisma.rating.create({
       data: {
