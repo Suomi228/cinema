@@ -6,8 +6,6 @@ import { toast } from "sonner";
 import {
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
@@ -23,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,56 +28,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Resolver, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-
-type Movie = {
-  id: number;
-  title: string;
-  description: string;
-  genre: string;
-  releaseDate: string;
-  imageUrl: string;
-  averageRating?: number;
-  userRating?: number;
-};
-
-type User = {
-  id: number;
-  role: "USER" | "ADMIN";
-  favorites: { movieId: number }[];
-};
-
-const StarRating = ({
-  rating,
-  onRatingChange,
-  disabled = false,
-}: {
-  rating: number;
-  onRatingChange?: (rating: number) => void;
-  disabled?: boolean;
-}) => (
-  <div className="flex items-center">
-    {[1, 2, 3, 4, 5].map((star) => (
-      <Button
-        key={star}
-        variant="ghost"
-        size="icon"
-        onClick={() => onRatingChange?.(star)}
-        disabled={disabled}
-        className="h-8 w-8 p-0"
-      >
-        <Star
-          className={`h-5 w-5 ${
-            star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-          }`}
-        />
-      </Button>
-    ))}
-  </div>
-);
+import { MovieCard } from "@/components/movie/MovieCard";
+import { FavoritesSidebar } from "@/components/movie/FavoritesSidebar";
 
 const movieFormSchema = z.object({
   title: z.string().min(1, "Название обязательно").max(30),
@@ -103,6 +55,7 @@ type MovieFormValues = z.infer<typeof movieFormSchema>;
 
 export default function MoviesPage() {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [favorites, setFavorites] = useState<Movie[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>(
     {}
@@ -112,9 +65,10 @@ export default function MoviesPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<MovieFormValues>({
-    resolver: zodResolver(movieFormSchema) as Resolver<MovieFormValues>,
+    resolver: zodResolver(movieFormSchema),
     defaultValues: {
       title: "",
       description: "",
@@ -130,11 +84,17 @@ export default function MoviesPage() {
     formState: { errors, isSubmitting },
     reset,
     setValue,
-    watch,
     trigger,
   } = form;
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fetchFavorites = async () => {
+    try {
+      const res = await axios.get("/api/fav");
+      setFavorites(res.data);
+    } catch (err) {
+      toast.error("Не удалось загрузить избранное");
+    }
+  };
 
   const fetchMovies = async () => {
     try {
@@ -163,6 +123,12 @@ export default function MoviesPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      fetchFavorites();
+    }
+  }, [user]);
+
   const isFavorite = (movieId: number) =>
     user?.favorites?.some((f) => f.movieId === movieId);
 
@@ -172,7 +138,7 @@ export default function MoviesPage() {
     try {
       setRatingLoading((prev) => ({ ...prev, [movieId]: true }));
       await axios.post(`/api/movies/${movieId}/rating`, { value });
-      await fetchMovies();
+      await Promise.all([fetchMovies(), fetchFavorites()]);
       toast.success("Оценка сохранена");
     } catch (error) {
       toast.error("Ошибка оценки");
@@ -192,13 +158,13 @@ export default function MoviesPage() {
 
       if (isFavorite(movieId)) {
         await axios.delete(`/api/movies/${movieId}/favorite`);
-        toast.success("Фильм успешно удален из избранного");
+        toast.success("Фильм удален из избранного");
       } else {
         await axios.post(`/api/movies/${movieId}/favorite`);
-        toast.success("Фильм успешно добавлен в ваше избранное");
+        toast.success("Фильм добавлен в избранное");
       }
 
-      await fetchUserData();
+      await Promise.all([fetchUserData(), fetchFavorites(), fetchMovies()]);
     } catch (err) {
       toast.error("Не удалось обновить избранное");
     } finally {
@@ -222,7 +188,7 @@ export default function MoviesPage() {
     try {
       const formData = new FormData();
       formData.append("title", data.title);
-      formData.append("description", data.description || "");
+      formData.append("description", data.description);
       formData.append("genre", data.genre);
       formData.append("releaseDate", data.releaseDate);
       formData.append("image", data.image);
@@ -247,7 +213,8 @@ export default function MoviesPage() {
     return (
       <div className="p-4">
         <div className="flex justify-between items-center mb-6">
-          <Skeleton className="h-8 w-24" /> <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-10 w-32" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
@@ -272,192 +239,149 @@ export default function MoviesPage() {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Фильмы</h1>
+    <div className="flex flex-col lg:flex-row gap-6 p-4">
+      <div className="flex-1">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Фильмы</h1>
 
-        {user?.role === "ADMIN" && (
-          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-            <DialogTrigger asChild>
-              <Button>Добавить фильм</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Добавить новый фильм</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="title">Название фильма</Label>
-                      <Input id="title" {...register("title")} />
-                      {errors.title && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.title.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Описание</Label>
-                      <Textarea
-                        id="description"
-                        {...register("description")}
-                        rows={3}
-                        className="resize-none"
-                      />
-                      {errors.description && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.description.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="genre">Жанр</Label>
-                      <Select
-                        {...register("genre")}
-                        onValueChange={(value) => setValue("genre", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите жанр" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Комедия">Комедия</SelectItem>
-                          <SelectItem value="Драма">Драма</SelectItem>
-                          <SelectItem value="Боевик">Боевик</SelectItem>
-                          <SelectItem value="Фантастика">Фантастика</SelectItem>
-                          <SelectItem value="Ужасы">Ужасы</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {errors.genre && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.genre.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="releaseDate">Дата выхода</Label>
-                      <Input
-                        id="releaseDate"
-                        type="date"
-                        {...register("releaseDate")}
-                      />
-                      {errors.releaseDate && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.releaseDate.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="image">Постер фильма</Label>
-                      <Input
-                        id="image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                      />
-                      {errors.image && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.image.message}
-                        </p>
-                      )}
-                    </div>
-                    {imagePreview && (
-                      <div className="mt-4">
-                        <Label>Предпросмотр:</Label>
-                        <img
-                          src={imagePreview}
-                          alt="Предпросмотр постера"
-                          className="w-full h-48 object-contain border rounded mt-2"
-                        />
+          {user?.role === "ADMIN" && (
+            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+              <DialogTrigger asChild>
+                <Button>Добавить фильм</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Добавить новый фильм</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="title">Название фильма</Label>
+                        <Input id="title" {...register("title")} />
+                        {errors.title && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {errors.title.message}
+                          </p>
+                        )}
                       </div>
-                    )}
+                      <div>
+                        <Label htmlFor="description">Описание</Label>
+                        <Textarea
+                          id="description"
+                          {...register("description")}
+                          rows={3}
+                          className="resize-none"
+                        />
+                        {errors.description && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {errors.description.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="genre">Жанр</Label>
+                        <Select
+                          {...register("genre")}
+                          onValueChange={(value) => setValue("genre", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите жанр" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Комедия">Комедия</SelectItem>
+                            <SelectItem value="Драма">Драма</SelectItem>
+                            <SelectItem value="Боевик">Боевик</SelectItem>
+                            <SelectItem value="Фантастика">
+                              Фантастика
+                            </SelectItem>
+                            <SelectItem value="Ужасы">Ужасы</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {errors.genre && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {errors.genre.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="releaseDate">Дата выхода</Label>
+                        <Input
+                          id="releaseDate"
+                          type="date"
+                          {...register("releaseDate")}
+                        />
+                        {errors.releaseDate && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {errors.releaseDate.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="image">Постер фильма</Label>
+                        <Input
+                          id="image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                        />
+                        {errors.image && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {errors.image.message}
+                          </p>
+                        )}
+                      </div>
+                      {imagePreview && (
+                        <div className="mt-4">
+                          <Label>Предпросмотр:</Label>
+                          <img
+                            src={imagePreview}
+                            alt="Предпросмотр постера"
+                            className="w-full h-48 object-contain border rounded mt-2"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Добавление..." : "Добавить фильм"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Добавление..." : "Добавить фильм"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {movies.map((movie) => (
+            <MovieCard
+              key={movie.id}
+              movie={movie}
+              user={user}
+              isFavorite={(id: number) => isFavorite(id) || false}
+              toggleFavorite={toggleFavorite}
+              handleRateMovie={handleRateMovie}
+              loadingStates={loadingStates}
+              ratingLoading={ratingLoading}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {movies.map((movie) => (
-          <Card key={movie.id} className="flex flex-col h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">
-                {movie.title.length > 20
-                  ? movie.title.slice(0, 20) + "..."
-                  : movie.title}
-              </CardTitle>
-              <CardDescription className="flex items-center gap-2">
-                <Badge variant="outline">{movie.genre}</Badge>
-                <span>{new Date(movie.releaseDate).getFullYear()}</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-4">
-              <img
-                src={movie.imageUrl}
-                alt={movie.title}
-                className="w-full h-48 object-contain rounded"
-              />
-              <p className="text-sm text-gray-700">
-                {movie.description.length > 30
-                  ? movie.description.slice(0, 30) + "..."
-                  : movie.description}
-              </p>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <StarRating
-                    rating={Math.round(movie.averageRating || 0)}
-                    disabled
-                  />
-                  {movie.averageRating && (
-                    <span className="text-sm text-gray-600">
-                      {movie.averageRating.toFixed(1)}
-                    </span>
-                  )}
-                </div>
-
-                {user && (
-                  <div>
-                    <Label>Ваша оценка:</Label>
-                    <StarRating
-                      rating={movie.userRating || 0}
-                      onRatingChange={(rating) =>
-                        handleRateMovie(movie.id, rating)
-                      }
-                      disabled={ratingLoading[movie.id]}
-                    />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                onClick={() => toggleFavorite(movie.id)}
-                disabled={!user || loadingStates[movie.id]}
-                variant={isFavorite(movie.id) ? "secondary" : "default"}
-                className="w-full"
-              >
-                {loadingStates[movie.id]
-                  ? "Загрузка..."
-                  : isFavorite(movie.id)
-                  ? "Удалить из избранного"
-                  : "Добавить в избранное"}
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+      {user && (
+        <FavoritesSidebar
+          favorites={favorites}
+          user={user}
+          toggleFavorite={toggleFavorite}
+          loadingStates={loadingStates}
+        />
+      )}
     </div>
   );
 }
