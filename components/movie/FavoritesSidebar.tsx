@@ -1,9 +1,8 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Heart, Film } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { FavoriteMovieItem } from "./FavoriteMovieItem";
 
@@ -48,7 +47,7 @@ export function FavoritesSidebar({
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+            <div className="flex flex-col items-center justify-center text-center">
               <Heart className="h-8 w-8 text-gray-400" />
               <p className="text-gray-500">Нет избранных фильмов</p>
               <p className="text-sm text-gray-400">
