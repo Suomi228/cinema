@@ -21,7 +21,7 @@ export function FavoritesSidebar({
   loadingStates,
 }: Props) {
   return (
-    <div className="lg:w-80 space-y-4">
+    <div className="lg:w-96 space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -34,7 +34,7 @@ export function FavoritesSidebar({
         </CardHeader>
         <CardContent>
           {favorites.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-200px)] pr-4">
+            <ScrollArea className="lg:h-[calc(100vh-200px)] pr-4">
               <div className="space-y-3">
                 {favorites.map((movie) => (
                   <FavoriteMovieItem
